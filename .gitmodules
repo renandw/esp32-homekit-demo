@@ -28,3 +28,6 @@
 [submodule "components/common/button"]
 	path = components/common/button
 	url = https://github.com/maximkulkin/esp-button
+[submodule "components/esp-idf-lib"]
+	path = components/esp-idf-lib
+	url = https://github.com/AchimPieters/esp-idf-lib.git
