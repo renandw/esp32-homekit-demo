@@ -34,7 +34,7 @@
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
 #include "wifi.h"
-#include "led_strip.h"
+#include <led_strip.h>
 
 void on_wifi_ready();
 

@@ -37,7 +37,7 @@
 
 #define TAMPERED_PIN 4
 
-#include "max7219.h"
+#include <max7219.h>
 
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(4, 0, 0)
 #define HOST    HSPI_HOST
