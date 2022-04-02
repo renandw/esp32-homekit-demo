@@ -21,6 +21,9 @@
 
  **/
 
+
+#include "neopixel.h"
+
 #include <stdio.h>
 #include <esp_wifi.h>
 #include <esp_event.h>
@@ -34,29 +37,89 @@
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
 #include "wifi.h"
-#include <led_strip.h>
 
-void on_wifi_ready();
+#ifndef __cplusplus
+#define nullptr  NULL
+#endif
 
-static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
+#define HIGH 1
+#define LOW 0
+#define OUTPUT GPIO_MODE_OUTPUT
+#define INPUT GPIO_MODE_INPUT
+
+#define DEC 10
+#define HEX 16
+#define OCT 8
+#define BIN 2
+
+#define min(a, b)  ((a) < (b) ? (a) : (b))
+#define max(a, b)  ((a) > (b) ? (a) : (b))
+#define floor(a)   ((int)(a))
+#define ceil(a)    ((int)(a) < (a) ? (a+1) : (a))
+
+strand_t STRANDS[] = { // Avoid using any of the strapping pins on the ESP32
+        {.rmtChannel = 0,
+         .gpioNum = 5, 
+         .ledType = LED_SK6812W_V1,
+         .brightLimit = 32,
+         .numPixels = 3,
+         .pixels = nullptr, ._stateVars = nullptr}
+};
+
+int STRANDCNT = sizeof(STRANDS)/sizeof(STRANDS[0]);
+
+void gpioSetup(int gpioNum, int gpioMode, int gpioVal) {
+        gpio_num_t gpioNumNative = (gpio_num_t)(gpioNum);
+        gpio_mode_t gpioModeNative = (gpio_mode_t)(gpioMode);
+        gpio_pad_select_gpio(gpioNumNative);
+        gpio_set_direction(gpioNumNative, gpioModeNative);
+        gpio_set_level(gpioNumNative, gpioVal);
+}
+
+uint32_t IRAM_ATTR millis()
 {
-        if (event_base == WIFI_EVENT && (event_id == WIFI_EVENT_STA_START || event_id == WIFI_EVENT_STA_DISCONNECTED)) {
-                printf("STA start\n");
-                esp_wifi_connect();
-        } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
-                printf("WiFI ready\n");
-                on_wifi_ready();
+        return xTaskGetTickCount() * portTICK_PERIOD_MS;
+}
+
+void delay(uint32_t ms)
+{
+        if (ms > 0) {
+                vTaskDelay(ms / portTICK_PERIOD_MS);
         }
 }
 
+// Global variables
+float led_hue = 0;              // hue is scaled 0 to 360
+float led_saturation = 59;      // saturation is scaled 0 to 100
+float led_brightness = 100;     // brightness is scaled 0 to 100
+bool led_on = false;            // on is boolean on or off
+
+void on_wifi_ready();
+
+esp_err_t event_handler(void *ctx, system_event_t *event)
+{
+        switch(event->event_id) {
+        case SYSTEM_EVENT_STA_START:
+                printf("STA start\n");
+                esp_wifi_connect();
+                break;
+        case SYSTEM_EVENT_STA_GOT_IP:
+                printf("WiFI ready\n");
+                on_wifi_ready();
+                break;
+        case SYSTEM_EVENT_STA_DISCONNECTED:
+                printf("STA disconnected\n");
+                esp_wifi_connect();
+                break;
+        default:
+                break;
+        }
+        return ESP_OK;
+}
+
 static void wifi_init() {
-        ESP_ERROR_CHECK(esp_netif_init());
-
-        ESP_ERROR_CHECK(esp_event_loop_create_default());
-        esp_netif_create_default_wifi_sta();
-
-        ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
-        ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL));
+        tcpip_adapter_init();
+        ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
 
         wifi_init_config_t wifi_init_config = WIFI_INIT_CONFIG_DEFAULT();
         ESP_ERROR_CHECK(esp_wifi_init(&wifi_init_config));
@@ -74,132 +137,107 @@ static void wifi_init() {
         ESP_ERROR_CHECK(esp_wifi_start());
 }
 
-const int button_gpio = 0;
-#define LED_TYPE LED_STRIP_WS2812
-#define LED_GPIO 5
-#define LED_ON 0                // this is the value to write to GPIO for led on (0 = GPIO low)
-#define LED_STRIP_LEN 3           // this is the number of WS2812B leds on the strip
-#define LED_RGB_SCALE 255       // this is the scaling factor used for color conversion
+// This section is modified by the addition of white so that it assumes
+// fully saturated colors, and then scales with white to lower saturation.
+//
+// Next, scale appropriately the pure color by mixing with the white channel.
+// Saturation is defined as "the ratio of colorfulness to brightness" so we will
+// do this by a simple ratio wherein the color values are scaled down by (1-S)
+// while the white LED is placed at S.
 
-// Global variables
-float led_hue = 0;              // hue is scaled 0 to 360
-float led_saturation = 59;      // saturation is scaled 0 to 100
-float led_brightness = 100;     // brightness is scaled 0 to 100
-bool led_on = false;            // on is boolean on or off
-ws2812_pixel_t pixels[LED_COUNT];
+// This will maintain constant brightness because in HSI, R+B+G = I. Thus,
+// S*(R+B+G) = S*I. If we add to this (1-S)*I, where I is the total intensity,
+// the sum intensity stays constant while the ratio of colorfulness to brightness
+// goes down by S linearly relative to total Intensity, which is constant.
 
-//http://blog.saikoled.com/post/44677718712/how-to-convert-from-hsi-to-rgb-white
-static void hsi2rgb(float h, float s, float i, ws2812_pixel_t* rgb) {
-        int r, g, b;
+#include "math.h"
+#define DEG_TO_RAD(X) (M_PI*(X)/180)
 
-        while (h < 0) { h += 360.0F; }; // cycle h around to 0-360 degrees
-        while (h >= 360) { h -= 360.0F; };
-        h = 3.14159F*h / 180.0F;        // convert to radians.
-        s /= 100.0F;                    // from percentage to ratio
-        i /= 100.0F;                    // from percentage to ratio
-        s = s > 0 ? (s < 1 ? s : 1) : 0; // clamp s and i to interval [0,1]
-        i = i > 0 ? (i < 1 ? i : 1) : 0; // clamp s and i to interval [0,1]
-        i = i * sqrt(i);                // shape intensity to have finer granularity near 0
+void hsi2rgbw(float H, float S, float I, pixelColor_t* rgbw) {
+        int r, g, b, w;
+        float cos_h, cos_1047_h;
+        H = fmod(H,360); // cycle H around to 0-360 degrees
+        H = 3.14159*H/(float)180; // Convert to radians.
+        S /= 100;
+        I /= 100;
+        S = S>0 ? (S<1 ? S : 1) : 0; // clamp S and I to interval [0,1]
+        I = I>0 ? (I<1 ? I : 1) : 0;
 
-        if (h < 2.09439) {
-                r = LED_RGB_SCALE * i / 3 * (1 + s * cos(h) / cos(1.047196667 - h));
-                g = LED_RGB_SCALE * i / 3 * (1 + s * (1 - cos(h) / cos(1.047196667 - h)));
-                b = LED_RGB_SCALE * i / 3 * (1 - s);
+        if(H < 2.09439) {
+                cos_h = cos(H);
+                cos_1047_h = cos(1.047196667-H);
+                r = S*255*I/3*(1+cos_h/cos_1047_h);
+                g = S*255*I/3*(1+(1-cos_h/cos_1047_h));
+                b = 0;
+                w = 255*(1-S)*I;
+        } else if(H < 4.188787) {
+                H = H - 2.09439;
+                cos_h = cos(H);
+                cos_1047_h = cos(1.047196667-H);
+                g = S*255*I/3*(1+cos_h/cos_1047_h);
+                b = S*255*I/3*(1+(1-cos_h/cos_1047_h));
+                r = 0;
+                w = 255*(1-S)*I;
+        } else {
+                H = H - 4.188787;
+                cos_h = cos(H);
+                cos_1047_h = cos(1.047196667-H);
+                b = S*255*I/3*(1+cos_h/cos_1047_h);
+                r = S*255*I/3*(1+(1-cos_h/cos_1047_h));
+                g = 0;
+                w = 255*(1-S)*I;
         }
-        else if (h < 4.188787) {
-                h = h - 2.09439;
-                g = LED_RGB_SCALE * i / 3 * (1 + s * cos(h) / cos(1.047196667 - h));
-                b = LED_RGB_SCALE * i / 3 * (1 + s * (1 - cos(h) / cos(1.047196667 - h)));
-                r = LED_RGB_SCALE * i / 3 * (1 - s);
-        }
-        else {
-                h = h - 4.188787;
-                b = LED_RGB_SCALE * i / 3 * (1 + s * cos(h) / cos(1.047196667 - h));
-                r = LED_RGB_SCALE * i / 3 * (1 + s * (1 - cos(h) / cos(1.047196667 - h)));
-                g = LED_RGB_SCALE * i / 3 * (1 - s);
-        }
 
-        rgb->red = (uint8_t) r;
-        rgb->green = (uint8_t) g;
-        rgb->blue = (uint8_t) b;
-        rgb->white = (uint8_t) 0;       // white channel is not used
+        rgbw->r=r;
+        rgbw->g=g;
+        rgbw->b=b;
+        rgbw->w=w;
 }
 
-void led_string_fill(ws2812_pixel_t rgb) {
-
-        // write out the new color to each pixel
-        for (int i = 0; i < LED_COUNT; i++) {
-                pixels[i] = rgb;
+void led_string_set() {
+        pixelColor_t color;
+        if(led_on) {
+                hsi2rgbw(led_hue, led_saturation, led_brightness, &color); \
+        } else {
+                color = pixelFromRGBW(0,0,0,0);
         }
-        ws2812_i2s_update(pixels, PIXEL_RGB);
+        printf("Requested color h=%f, s=%f, b=%f\n", led_hue, led_saturation, led_brightness);
+        printf("Color set to r=%d, g=%d, b=%d, w=%d\n", color.r, color.g, color.b, color.w);
+        strand_t* pStrand = &STRANDS[0];
+        for (uint16_t i = 0; i < pStrand->numPixels; i++) {
+                pStrand->pixels[i] = color;
+        }
+        digitalLeds_updatePixels(pStrand);
 }
 
-void led_string_set(void) {
-        ws2812_pixel_t rgb = { { 0, 0, 0, 0 } };
-
-        if (led_on) {
-                // convert HSI to RGBW
-                hsi2rgb(led_hue, led_saturation, led_brightness, &rgb);
-                //printf("h=%d,s=%d,b=%d => ", (int)led_hue, (int)led_saturation, (int)led_brightness);
-                //printf("r=%d,g=%d,b=%d,w=%d\n", rgbw.red, rgbw.green, rgbw.blue, rgbw.white);
-
-                // set the inbuilt led
-                gpio_write(led_gpio, LED_ON);
+void led_write(bool on) {
+        strand_t* pStrand = &STRANDS[0];
+        for (uint16_t i = 0; i < pStrand->numPixels; i++) {
+                pStrand->pixels[i] = pixelFromRGBW(on ? 255 : 0, on ? 255 : 0, on ? 255 : 0, on ? 255 : 0);
         }
-        else {
-                // printf("off\n");
-                gpio_write(led_gpio, 1 - LED_ON);
-        }
-
-        // write out the new color
-        led_string_fill(rgb);
-}
-
-static void wifi_init() {
-        struct sdk_station_config wifi_config = {
-                .ssid = WIFI_SSID,
-                .password = WIFI_PASSWORD,
-        };
-
-        sdk_wifi_set_opmode(STATION_MODE);
-        sdk_wifi_station_set_config(&wifi_config);
-        sdk_wifi_station_connect();
-}
-
-void led_init() {
-        // initialise the onboard led as a secondary indicator (handy for testing)
-        gpio_enable(led_gpio, GPIO_OUTPUT);
-
-        // initialise the LED strip
-        ws2812_i2s_init(LED_COUNT, PIXEL_RGB);
-
-        // set the initial state
-        led_string_set();
+        digitalLeds_updatePixels(pStrand);
 }
 
 void led_identify_task(void *_args) {
-        const ws2812_pixel_t COLOR_PINK = { { 255, 0, 127, 0 } };
-        const ws2812_pixel_t COLOR_BLACK = { { 0, 0, 0, 0 } };
-
-        for (int i = 0; i < 3; i++) {
-                for (int j = 0; j < 3; j++) {
-                        gpio_write(led_gpio, LED_ON);
-                        led_string_fill(COLOR_PINK);
+        for (int i=0; i<3; i++) {
+                for (int j=0; j<2; j++) {
+                        led_write(true);
                         vTaskDelay(100 / portTICK_PERIOD_MS);
-                        gpio_write(led_gpio, 1 - LED_ON);
-                        led_string_fill(COLOR_BLACK);
+                        led_write(false);
                         vTaskDelay(100 / portTICK_PERIOD_MS);
                 }
+
                 vTaskDelay(250 / portTICK_PERIOD_MS);
         }
 
-        led_string_set();
+        led_write(led_on);
+
         vTaskDelete(NULL);
 }
 
 void led_identify(homekit_value_t _value) {
-        // printf("LED identify\n");
-        xTaskCreate(led_identify_task, "LED identify", 128, NULL, 2, NULL);
+        printf("LED identify\n");
+        xTaskCreate(led_identify_task, "LED identify", 512, NULL, 2, NULL);
 }
 
 homekit_value_t led_on_get() {
@@ -254,38 +292,23 @@ void led_saturation_set(homekit_value_t value) {
         led_string_set();
 }
 
-
-
-
-#define DEVICE_NAME "HomeKit LED"
-#define DEVICE_MANUFACTURER "StudioPieters®"
-#define DEVICE_SERIAL "NLDA4SQN1466"
-#define DEVICE_MODEL "SD466NL/A"
-#define FW_VERSION "0.0.1"
-
-homekit_characteristic_t name = HOMEKIT_CHARACTERISTIC_(NAME, DEVICE_NAME);
-homekit_characteristic_t manufacturer = HOMEKIT_CHARACTERISTIC_(MANUFACTURER,  DEVICE_MANUFACTURER);
-homekit_characteristic_t serial = HOMEKIT_CHARACTERISTIC_(SERIAL_NUMBER, DEVICE_SERIAL);
-homekit_characteristic_t model= HOMEKIT_CHARACTERISTIC_(MODEL, DEVICE_MODEL);
-homekit_characteristic_t revision = HOMEKIT_CHARACTERISTIC_(FIRMWARE_REVISION,  FW_VERSION);
-
 homekit_accessory_t *accessories[] = {
         HOMEKIT_ACCESSORY(.id=1, .category=homekit_accessory_category_lightbulb, .services=(homekit_service_t*[]){
                 HOMEKIT_SERVICE(ACCESSORY_INFORMATION, .characteristics=(homekit_characteristic_t*[]){
-                        &name,
-                        &manufacturer,
-                        &serial,
-                        &model,
-                        &revision,
+                        HOMEKIT_CHARACTERISTIC(NAME, "Sample LED"),
+                        HOMEKIT_CHARACTERISTIC(MANUFACTURER, "HaPK"),
+                        HOMEKIT_CHARACTERISTIC(SERIAL_NUMBER, "037A2BABF19D"),
+                        HOMEKIT_CHARACTERISTIC(MODEL, "MyLED"),
+                        HOMEKIT_CHARACTERISTIC(FIRMWARE_REVISION, "0.1"),
                         HOMEKIT_CHARACTERISTIC(IDENTIFY, led_identify),
                         NULL
                 }),
-                HOMEKIT_SERVICE(LIGHTBULB, .primary = true, .characteristics = (homekit_characteristic_t*[]) {
-                        HOMEKIT_CHARACTERISTIC(NAME, "Sample LED Strip"),
+                HOMEKIT_SERVICE(LIGHTBULB, .primary=true, .characteristics=(homekit_characteristic_t*[]){
+                        HOMEKIT_CHARACTERISTIC(NAME, "Sample LED"),
                         HOMEKIT_CHARACTERISTIC(
-                                ON, true,
-                                .getter = led_on_get,
-                                .setter = led_on_set
+                                ON, false,
+                                .getter=led_on_get,
+                                .setter=led_on_set
                                 ),
                         HOMEKIT_CHARACTERISTIC(
                                 BRIGHTNESS, 100,
@@ -320,7 +343,15 @@ void on_wifi_ready() {
 }
 
 void app_main(void) {
-// Initialize NVS
+        // Initialize led strip
+        gpioSetup(16, OUTPUT, LOW);
+
+        if (digitalLeds_initStrands(STRANDS, STRANDCNT)) {
+                ets_printf("Init FAILURE: halting\n");
+                while (true) {};
+        }
+
+        // Initialize NVS
         esp_err_t ret = nvs_flash_init();
         if (ret == ESP_ERR_NVS_NO_FREE_PAGES) {
                 ESP_ERROR_CHECK(nvs_flash_erase());
@@ -329,5 +360,4 @@ void app_main(void) {
         ESP_ERROR_CHECK( ret );
 
         wifi_init();
-        led_init();
 }
