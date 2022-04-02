@@ -55,11 +55,11 @@
 #define min(a, b)  ((a) < (b) ? (a) : (b))
 #define max(a, b)  ((a) > (b) ? (a) : (b))
 #define floor(a)   ((int)(a))
-#define ceil(a)    ((int)(a) < (a) ? (a+1) : (a))
+#define ceil(a)    ((int)((int)(a) < (a) ? (a+1) : (a)))
 
 strand_t STRANDS[] = { // Avoid using any of the strapping pins on the ESP32
         {.rmtChannel = 0,
-         .gpioNum = 5, 
+         .gpioNum = 5,
          .ledType = LED_SK6812W_V1,
          .brightLimit = 32,
          .numPixels = 3,
