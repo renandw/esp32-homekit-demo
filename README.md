@@ -15,5 +15,25 @@ Go to the Apple Developer Site if you like to learn more about developing HomeKi
 
 Please go through Getting Started Guide before using HomeKit ADK.
 
-How to setup for a ESP32 module.
-How to setup for a ESP32 C3 Module.
+Initialize and sync all submodules (recursively):
+```shell
+git submodule update --init --recursive
+```
+Copy wifi.h.sample -> wifi.h and edit it with correct WiFi SSID and password.
+
+Install esp-idf by following instructions on my blog page. https://www.studiopieters.nl/idf/
+
+## Configure project:
+Next you execute the following command, where the path is the place, where in macOS, we stored our github repo. Type the following line in your terminal window en press enter.
+
+```shell
+docker run -it -v ~/ESP32:/project -w /project espressif/idf:v4.3.2
+```
+Note: idf:v4.3.2 can change if you installed another version!
+
+Now you can change into the homekit-led directory. type cd homekit-led and press enter.
+Now we start the compiling by typing 
+```shell
+Make all 
+```
+and then press enter, The result will be in a directory build and the process ends with an instruction.
