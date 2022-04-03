@@ -21,7 +21,7 @@ git submodule update --init --recursive
 ```
 Copy wifi.h.sample -> wifi.h and edit it with correct WiFi SSID and password.
 
-Install esp-idf by following instructions on my blog page. https://www.studiopieters.nl/idf/
+Install esp-idf by following instructions on my webpage. https://www.studiopieters.nl/idf/
 
 ## Configure project:
 Next you execute the following command, where the path is the place, where in macOS, we stored our github repo. Type the following line in your terminal window en press enter.
