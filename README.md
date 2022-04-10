@@ -34,6 +34,6 @@ Note: idf:v4.3.2 can change if you installed another version!
 Now you can change into the homekit-led directory. type cd homekit-led and press enter.
 Now we start the compiling by typing 
 ```shell
-Make all 
+Make -j4 all 
 ```
 and then press enter, The result will be in a directory build and the process ends with an instruction.
