@@ -40,50 +40,50 @@ void on_wifi_ready();
 
 static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
-    if (event_base == WIFI_EVENT && (event_id == WIFI_EVENT_STA_START || event_id == WIFI_EVENT_STA_DISCONNECTED)) {
-        printf("STA start\n");
-        esp_wifi_connect();
-    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
-        printf("WiFI ready\n");
-        on_wifi_ready();
-    }
+        if (event_base == WIFI_EVENT && (event_id == WIFI_EVENT_STA_START || event_id == WIFI_EVENT_STA_DISCONNECTED)) {
+                printf("STA start\n");
+                esp_wifi_connect();
+        } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+                printf("WiFI ready\n");
+                on_wifi_ready();
+        }
 }
 
 static void wifi_init() {
-    ESP_ERROR_CHECK(esp_netif_init());
+        ESP_ERROR_CHECK(esp_netif_init());
 
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    esp_netif_create_default_wifi_sta();
+        ESP_ERROR_CHECK(esp_event_loop_create_default());
+        esp_netif_create_default_wifi_sta();
 
-    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL));
+        ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
+        ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL));
 
-    wifi_init_config_t wifi_init_config = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&wifi_init_config));
-    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+        wifi_init_config_t wifi_init_config = WIFI_INIT_CONFIG_DEFAULT();
+        ESP_ERROR_CHECK(esp_wifi_init(&wifi_init_config));
+        ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 
-    wifi_config_t wifi_config = {
-        .sta = {
-            .ssid = WIFI_SSID,
-            .password = WIFI_PASSWORD,
-        },
-    };
+        wifi_config_t wifi_config = {
+                .sta = {
+                        .ssid = WIFI_SSID,
+                        .password = WIFI_PASSWORD,
+                },
+        };
 
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
-    ESP_ERROR_CHECK(esp_wifi_start());
+        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+        ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
+        ESP_ERROR_CHECK(esp_wifi_start());
 }
 
-#define LED_INBUILT_GPIO 2  // this is the onboard LED used to show on/off only
-#define SENSOR_PIN 4
+const int sensor_gpio = 4;
+const int led_gpio = 2;
 bool led_on = false;
 
 void led_write(bool on) {
-        gpio_write(LED_INBUILT_GPIO, on ? 0 : 1);
+      gpio_set_level(led_gpio, on ? 1 : 0);
 }
 
 void led_init() {
-        gpio_enable(LED_INBUILT_GPIO, GPIO_OUTPUT);
+        gpio_set_direction(led_gpio, GPIO_MODE_OUTPUT);
         led_write(led_on);
 }
 
@@ -168,11 +168,7 @@ void app_main(void) {
         wifi_init();
         led_init();
 
-          if (toggle_create(SENSOR_PIN, sensor_callback, NULL)) {
-                  printf("Failed to initialize motion sensor\n");
-          }
-
-  // Get Github version number
-          int c_hash=ota_read_sysparam(&revision.value.string_value);
-          config.accessories[0]->config_number=c_hash;
-  }
+        if (toggle_create(sensor_gpio, sensor_callback, NULL)) {
+                printf("Failed to initialize motion sensor\n");
+        }
+}
