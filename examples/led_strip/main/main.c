@@ -21,6 +21,8 @@
 
  **/
 
+ // https://github.com/iDarshan/ESP32-HomeKit-Night-Light/blob/master/main/night_light.h
+
 #include <stdio.h>
 #include <esp_wifi.h>
 #include <esp_event.h>
@@ -29,14 +31,14 @@
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-#include <driver/gpio.h>
 
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
 #include "wifi.h"
 
-#include "ws2812_i2s/ws2812_i2s.h"
-#include <math.h>
+
+#include "neopixel.h"
+
 
 void on_wifi_ready();
 
@@ -76,96 +78,6 @@ static void wifi_init() {
     ESP_ERROR_CHECK(esp_wifi_start());
 }
 
-#define LED_ON 0// this is the value to write to GPIO for led on (0 = GPIO low)
-#define LED_INBUILT_GPIO 2// this is the onboard LED used to show on/off only
-#define LED_COUNT 15// this is the number of WS2812B leds on the strip
-#define LED_RGB_SCALE 255 // this is the scaling factor used for color conversion
-
-const int button_gpio = 0;// Button GPIO pin - Click On/Off, 10s Hold Reset
-
-float hue = 0;// hue is scaled 0 to 360
-float saturation = 59;// saturation is scaled 0 to 100
-float brightness = 100; // brightness is scaled 0 to 100
-
-bool on = false;// on is boolean on or off
-
-ws2812_pixel_t pixels[LED_COUNT];
-ws2812_pixel_t current_color = { { 0, 0, 0, 0 } };
-ws2812_pixel_t target_color = { { 0, 0, 0, 0 } };
-
-void switch_on_callback(homekit_characteristic_t *_ch, homekit_value_t on, void *context);
-void button_callback(button_event_t event, void* context);
-
-//http://blog.saikoled.com/post/44677718712/how-to-convert-from-hsi-to-rgb-white
-static void hsi2rgb(float h, float s, float i, ws2812_pixel_t* rgb) {
-        int r, g, b;
-
-        while (h < 0) { h += 360.0F; }; // cycle h around to 0-360 degrees
-        while (h >= 360) { h -= 360.0F; };
-        h = 3.14159F*h / 180.0F;// convert to radians.
-        s /= 100.0F;// from percentage to ratio
-        i /= 100.0F;// from percentage to ratio
-        s = s > 0 ? (s < 1 ? s : 1) : 0;// clamp s and i to interval [0,1]
-        i = i > 0 ? (i < 1 ? i : 1) : 0;// clamp s and i to interval [0,1]
-        i = i * sqrt(i);// shape intensity to have finer granularity near 0
-
-        if (h < 2.09439) {
-                r = LED_RGB_SCALE * i / 3 * (1 + s * cos(h) / cos(1.047196667 - h));
-                g = LED_RGB_SCALE * i / 3 * (1 + s * (1 - cos(h) / cos(1.047196667 - h)));
-                b = LED_RGB_SCALE * i / 3 * (1 - s);
-        }
-        else if (h < 4.188787) {
-                h = h - 2.09439;
-                g = LED_RGB_SCALE * i / 3 * (1 + s * cos(h) / cos(1.047196667 - h));
-                b = LED_RGB_SCALE * i / 3 * (1 + s * (1 - cos(h) / cos(1.047196667 - h)));
-                r = LED_RGB_SCALE * i / 3 * (1 - s);
-        }
-        else {
-                h = h - 4.188787;
-                b = LED_RGB_SCALE * i / 3 * (1 + s * cos(h) / cos(1.047196667 - h));
-                r = LED_RGB_SCALE * i / 3 * (1 + s * (1 - cos(h) / cos(1.047196667 - h)));
-                g = LED_RGB_SCALE * i / 3 * (1 - s);
-        }
-
-        rgb->red = (uint8_t) r;
-        rgb->green = (uint8_t) g;
-        rgb->blue = (uint8_t) b;
-        rgb->white= (uint8_t) 0;
-}
-
-void led_string_fill(ws2812_pixel_t rgb) {
-        for (int i = 0; i < LED_COUNT; i++) {
-                pixels[i] = rgb;
-        }
-        ws2812_i2s_update(pixels, PIXEL_RGB);
-}
-
-void ledstrip_init() {
-        gpio_enable(LED_INBUILT_GPIO, GPIO_OUTPUT);
-        ws2812_i2s_init(LED_COUNT, PIXEL_RGB);
-}
-
-void ledstrip_identify_task(void *_args) {
-        const ws2812_pixel_t COLOR_BLUE= { { 0, 0, 255, 0 } };
-        const ws2812_pixel_t COLOR_BLACK = { { 0, 0, 0, 0 } };
-
-        for (int i = 0; i < 3; i++) {
-                for (int j = 0; j < 3; j++) {
-                        gpio_write(LED_INBUILT_GPIO, LED_ON);
-                        led_string_fill(COLOR_BLUE);
-                        vTaskDelay(100 / portTICK_PERIOD_MS);
-                        gpio_write(LED_INBUILT_GPIO, 1 - LED_ON);
-                        led_string_fill(COLOR_BLACK);
-                        vTaskDelay(100 / portTICK_PERIOD_MS);
-                }
-                vTaskDelay(250 / portTICK_PERIOD_MS);
-        }
-        vTaskDelete(NULL);
-}
-
-void ledstrip_identify(homekit_value_t _value) {
-        xTaskCreate(ledstrip_identify_task, "Lightstrip identify", 128, NULL, 2, NULL);
-}
 
 
 homekit_value_t brightness_get() {
@@ -176,6 +88,7 @@ void brightness_set(homekit_value_t value) {
                 return;
         }
         brightness = value.int_value;
+        night_light_set_brightness(value.int_value);
 }
 
 homekit_value_t led_hue_get() {
@@ -187,6 +100,7 @@ void led_hue_set(homekit_value_t value) {
                 return;
         }
         hue= value.float_value;
+        int night_light_set_hue(value.float_value);
 }
 
 homekit_value_t saturation_get() {
@@ -198,7 +112,10 @@ void saturation_set(homekit_value_t value) {
                 return;
         }
         saturation = value.float_value;
+        night_light_set_saturation(value.float_value);
 }
+
+
 
 homekit_characteristic_t lightbulb_on = HOMEKIT_CHARACTERISTIC_(
         ON, false,
@@ -207,98 +124,9 @@ homekit_characteristic_t lightbulb_on = HOMEKIT_CHARACTERISTIC_(
 
 void switch_on_callback(homekit_characteristic_t *_ch, homekit_value_t on, void *context) {
         on = lightbulb_on.value.bool_value;
+        night_light_set_on(lightbulb_on.value.bool_value);
 }
 
-void button_callback(button_event_t event, void* context) {
-        switch (event) {
-        case button_event_single_press:
-                lightbulb_on.value.bool_value = !lightbulb_on.value.bool_value;
-                homekit_characteristic_notify(&lightbulb_on, lightbulb_on.value);
-                break;
-        case button_event_double_press:
-                printf("double press\n");
-                break;
-        case button_event_tripple_press:
-                printf("tripple press\n");
-                break;
-        case button_event_long_press:
-                printf("long press\n");
-                break;
-        }
-}
-
-void led_string_set(void *pvParameters) {
-        ws2812_pixel_t rgb = { { 0, 0, 0, 0 } };
-        ws2812_pixel_t rgb1 = { { 0, 0, 0, 0 } };
-        intx = 1,x1 = 1,x2 = 1;
-        while(1) {
-                if (on) {
-                        hsi2rgb(led_hue, saturation, brightness, &rgb);
-                        target_color.red = rgb.red;
-                        target_color.green = rgb.green;
-                        target_color.blue = rgb.blue;
-                        target_color.white = rgb.white;
-                        gpio_write(LED_INBUILT_GPIO, LED_ON);
-                }
-                else {
-                        target_color.red = 0;
-                        target_color.green = 0;
-                        target_color.blue = 0;
-                        target_color.white = 0;
-                        gpio_write(LED_INBUILT_GPIO, 1 - LED_ON);
-                }
-                if(current_color.red < target_color.red) {
-                        x = (target_color.red - rgb1.red )/ 20;
-                        rgb1.red += (x < 1) ? 1 : x;
-                        if(rgb1.red >= target_color.red) {
-                                rgb1.red = target_color.red;
-                                current_color.red = target_color.red;
-                        }
-                }
-                else if(current_color.red > target_color.red) {
-                        x = (rgb1.red - target_color.red)/ 20;
-                        rgb1.red -= (x < 1) ? 1 : x;
-                        if(rgb1.red <= target_color.red) {
-                                rgb1.red = target_color.red;
-                                current_color.red = target_color.red;
-                        }
-                }
-                if(current_color.green < target_color.green) {
-                        x1 = (target_color.green - rgb1.green )/ 20;
-                        rgb1.green += (x1 < 1) ? 1 : x1;
-                        if(rgb1.green >= target_color.green) {
-                                rgb1.green = target_color.green;
-                                current_color.green = target_color.green;
-                        }
-                }
-                else if(current_color.green > target_color.green) {
-                        x1 = (rgb1.green - target_color.green)/ 20;
-                        rgb1.green -= (x1 < 1) ? 1 : x1;
-                        if(rgb1.green <= target_color.green) {
-                                rgb1.green = target_color.green;
-                                current_color.green = target_color.green;
-                        }
-                }
-                if(current_color.blue < target_color.blue) {
-                        x2 = (target_color.blue - rgb1.blue )/ 20;
-                        rgb1.blue += (x2 < 1) ? 1 : x2;
-                        if(rgb1.blue >= target_color.blue) {
-                                rgb1.blue = target_color.blue;
-                                current_color.blue = target_color.blue;
-                        }
-                }
-                else if(current_color.blue > target_color.blue) {
-                        x2 = (rgb1.blue - target_color.blue)/ 20;
-                        rgb1.blue -= (x2 < 1) ? 1 : x2;
-                        if(rgb1.blue <= target_color.blue) {
-                                rgb1.blue = target_color.blue;
-                                current_color.blue = target_color.blue;
-                        }
-                }
-                led_string_fill(rgb1);
-                vTaskDelay(10/ portTICK_PERIOD_MS);
-        }
-}
 
 
 
@@ -371,18 +199,6 @@ void app_main(void) {
         ESP_ERROR_CHECK( ret );
 
         wifi_init();
-        ledstrip_init();
-
-              xTaskCreate(led_string_set, "Lightstrip string set", 256, NULL, 2, NULL);
-
-              button_config_t config = BUTTON_CONFIG(
-                      button_active_high,
-                      .long_press_time = 4000,
-                      .max_repeat_presses = 3,
-                      );
-
-              int r = button_create(button_gpio, config, button_callback, NULL);
-              if (r) {
-                      printf("Failed to initialize a button\n");
-              }
+        /* Initialize the Light Bulb Hardware */
+        night_light_init();
       }

@@ -1,0 +1,9 @@
+menu "Example Configuration"
+
+     config EXAMPLE_RMT_TX_GPIO
+     	int "WS2812 LED GPIO Pin number"
+     	default	18
+     	help
+     		GPIO Pin number to use to drive WS2812 LED.
+
+endmenu
