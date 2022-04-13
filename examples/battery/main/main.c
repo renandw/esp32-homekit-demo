@@ -92,15 +92,15 @@ const int PG = 39;        // GPIO39 on ESP32 WROOM 32D - SensVN - Input only
 //|    Charge Cycle State     | STAT1 | STAT2 | PG  |
 //+---------------------------+-------+-------+-----+
 //| Shutdown (VCC=VBAT)       | Off   | Off   | Off |
-//| Shutdown (CE=L)   | Off   | Off   | On  |
-//| Preconditioning   | On    | Off   | On  |
-//| Constant Current  | On    | Off   | On  |
-//| Constant Voltage  | On    | Off   | On  |
+//| Shutdown (CE=L)           | Off   | Off   | On  |
+//| Preconditioning           | On    | Off   | On  |
+//| Constant Current          | On    | Off   | On  |
+//| Constant Voltage          | On    | Off   | On  |
 //| Charge Complete - Standby | Off   | On    | On  |
-//| Temperature Fault | On    | On    | On  |
-//| Timer Fault       | On    | On    | On  |
-//| Low Battery Output| On    | Off   | Off |
-//| No Battery Present| Off   | Off   | On  |
+//| Temperature Fault         | On    | On    | On  |
+//| Timer Fault               | On    | On    | On  |
+//| Low Battery Output        | On    | Off   | Off |
+//| No Battery Present        | Off   | Off   | On  |
 //| No Input Power Present    | Off   | Off   | Off |
 //+---------------------------+-------+-------+-----+
 
