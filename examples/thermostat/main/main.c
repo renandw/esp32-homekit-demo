@@ -174,7 +174,7 @@ void on_update(homekit_characteristic_t *ch, homekit_value_t value, void *contex
         update_state();
 }
 
-#define DEVICE_NAME "Temperature Sensor"
+#define DEVICE_NAME "Thermostat"
 #define DEVICE_MANUFACTURER "StudioPieters®"
 #define DEVICE_SERIAL "NLDA4SQN1466"
 #define DEVICE_MODEL "SD466NL/A"
