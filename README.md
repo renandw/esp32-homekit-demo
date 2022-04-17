@@ -32,6 +32,12 @@ docker run -it -v ~/ESP32:/project -w /project espressif/idf:v4.3.2
 Note: `idf:v4.3.2` can change if you installed another version!
 
 Now you can change into the homekit-led directory. type cd homekit-led and press enter.
+Open a terminal-based project configuration menu by typing 
+```shell
+idf.py menuconfig
+```
+Go to ``StudioPieters`` in the menu and change the options to your choice, or leave it as it is.
+
 Now we start the compiling by typing 
 ```shell
 Make -j4 all 
