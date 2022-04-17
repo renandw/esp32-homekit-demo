@@ -431,7 +431,7 @@ homekit_characteristic_t model= HOMEKIT_CHARACTERISTIC_(MODEL, DEVICE_MODEL);
 homekit_characteristic_t revision = HOMEKIT_CHARACTERISTIC_(FIRMWARE_REVISION,  FW_VERSION);
 
 homekit_accessory_t *accessories[] = {
-        HOMEKIT_ACCESSORY(.id=1, .category=homekit_accessory_category_lightbulb, .services=(homekit_service_t*[]){
+        HOMEKIT_ACCESSORY(.id=1, .category=homekit_accessory_category_blinds, .services=(homekit_service_t*[]){
                 HOMEKIT_SERVICE(ACCESSORY_INFORMATION, .characteristics=(homekit_characteristic_t*[]){
                         &name,
                         &manufacturer,
