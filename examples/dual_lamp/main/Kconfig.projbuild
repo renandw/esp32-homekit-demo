@@ -1,0 +1,8 @@
+menu "StudioPieters"
+    config LED_GPIO
+        int "Set the GPIO for the LED"
+        default 2
+        help
+            The GPIO number the LED is connected to.
+
+endmenu

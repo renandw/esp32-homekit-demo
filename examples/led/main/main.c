@@ -73,8 +73,7 @@ static void wifi_init() {
     ESP_ERROR_CHECK(esp_wifi_start());
 }
 
-const int button_gpio = 0;
-const int led_gpio = 2;
+const int led_gpio = CONFIG_LED_GPIO;
 bool led_on = false;
 
 void led_write(bool on) {
