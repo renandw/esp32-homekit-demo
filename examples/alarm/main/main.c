@@ -209,7 +209,7 @@ static void wifi_init() {
 }
 
 
-const int LED_INBUILT_GPIO = 2;  // this is the onboard LED used to show on/off only
+const int LED_INBUILT_GPIO = CONFIG_LED_GPIO;  // this is the onboard LED used to show on/off only
 bool led_on = false;
 
 void led_write(bool on) {

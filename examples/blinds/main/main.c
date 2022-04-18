@@ -74,7 +74,7 @@ static void wifi_init() {
 }
 
 //pins
-const int led_gpio = 2;
+const int led_gpio = CONFIG_LED_GPIO;
 const int left_blind_close = 13;
 const int left_blind_open = 12;
 const int right_blind_close = 4;

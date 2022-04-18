@@ -4,5 +4,4 @@ menu "StudioPieters"
         default 2
         help
             The GPIO number the LED is connected to.
-
 endmenu

@@ -75,7 +75,7 @@ static void wifi_init() {
 }
 
 
-const int led_gpio = 2;
+const int led_gpio = CONFIG_LED_GPIO;
 bool led_on = false;
 
 void led_write(bool on) {

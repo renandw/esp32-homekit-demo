@@ -88,7 +88,7 @@ static void wifi_init() {
 }
 
 const int button_gpio = 0;
-const int led_gpio = 2;
+const int led_gpio = CONFIG_LED_GPIO;
 const int relay_gpio = 14;
 bool led_on = false;
 bool relay_on = false;
