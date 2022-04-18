@@ -32,6 +32,10 @@ docker run -it -v ~/ESP32:/project -w /project espressif/idf:v4.3.2
 Note: `idf:v4.3.2` can change if you installed another version!
 
 Now you can change into the homekit-led directory. type cd homekit-led and press enter.
+```shell
+idf.py set-target esp32
+```
+
 Open a terminal-based project configuration menu by typing 
 ```shell
 idf.py menuconfig
