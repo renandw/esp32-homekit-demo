@@ -4,7 +4,6 @@ set(EXTRA_COMPONENT_DIRS
     ../../components/common
     ../../components/esp-idf
     ../../components/esp-idf-lib
-
 )
 
 include_directories(../../)
