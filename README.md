@@ -44,6 +44,6 @@ Go to ``StudioPieters`` in the menu and change the options to your choice, or le
 
 Now we start the compiling by typing 
 ```shell
-Make -j4 all 
+idf.py build
 ```
 and then press enter, The result will be in a directory build and the process ends with an instruction.
