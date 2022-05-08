@@ -28,11 +28,8 @@
 #include <nvs_flash.h>
 
 #include <freertos/FreeRTOS.h>
-
 //#include <freertos/task.h>
 #include <freertos/task_snapshot.h>
-//
-
 #include <driver/gpio.h>
 
 #include <homekit/homekit.h>
@@ -67,8 +64,8 @@ static void wifi_init() {
 
     wifi_config_t wifi_config = {
         .sta = {
-            .ssid = WIFI_SSID,
-            .password = WIFI_PASSWORD,
+            .ssid = CONFIG_WIFI_SSID,
+            .password = CONFIG_WIFI_PASSWORD,
         },
     };
 
@@ -165,8 +162,8 @@ homekit_accessory_t *accessories[] = {
 
 homekit_server_config_t config = {
         .accessories = accessories,
-        .password = "338-77-883",
-        .setupId="1QJ8",
+        .password = "CONFIG_SETUP_CODE",
+        .setupId="CONFIG_SETUP_ID",
 };
 
 void on_wifi_ready() {

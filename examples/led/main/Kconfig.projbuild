@@ -1,7 +1,32 @@
 menu "StudioPieters"
+config WIFI_SSID
+    string "Your WIFI SSID"
+    default "your WIFI SSID"
+    help
+        Enter your network name (SSID).
+
+    config WIFI_PASSWORD
+        string "Your WIFI Password"
+        default "Your WIFI Password"
+        help
+            Enter your WIFI password.
+
     config LED_GPIO
         int "Set the GPIO for the LED"
         default 2
         help
             The GPIO number the LED is connected to.
+
+    config SETUP_CODE
+        string "HomeKit Setup Code"
+        default "338-77-883"
+        help
+            Setup code to be used for HomeKit pairing, if hard-coded setup code is enabled.
+
+    config SETUP_ID
+        string "HomeKit Setup ID"
+        default "1QJ8"
+        help
+            Setup ID code to be used for HomeKit pairing, if hard-coded setup code is enabled.
+
 endmenu
