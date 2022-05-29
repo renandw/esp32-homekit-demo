@@ -47,16 +47,18 @@ Now we start the compiling by typing
 idf.py build
 ```
 and then press enter, The result will be in a directory build and the process ends with an instruction.
+<br>
+<br>
+#
+
+<img  style="float: right;" src="https://github.com/AchimPieters/esp32-homekit-demo/blob/main/apple_logo.png" width="10"> <sub><sup>HomeKit Accessory Protocol (HAP) is Apple’s proprietary protocol that enables third-party accessories in the home (e.g., lights, thermostats and door locks) and Apple products to communicate with each other. HAP supports two transports, IP and Bluetooth LE. The information provided in the HomeKit Accessory Protocol Specification (Non-Commercial Version) describes how to implement HAP in an accessory that you create for non-commercial use and that will not be distributed or sold.</sup></sub>
+
+<sub><sup> The HomeKit Accessory Protocol Specification (Non-Commercial Version) can be downloaded from the HomeKit Apple Developer page.</sup></sub>
+
+<sub><sup> Copyright © 2019 Apple Inc. All rights reserved. </sup></sub>
 
 
-
-<sup> HomeKit Accessory Protocol (HAP) is Apple’s proprietary protocol that enables third-party accessories in the home (e.g., lights, thermostats and door locks) and Apple products to communicate with each other. HAP supports two transports, IP and Bluetooth LE. The information provided in the HomeKit Accessory Protocol Specification (Non-Commercial Version) describes how to implement HAP in an accessory that you create for non-commercial use and that will not be distributed or sold.</sup>
-
-<sup> The HomeKit Accessory Protocol Specification (Non-Commercial Version) can be downloaded from the HomeKit Apple Developer page.</sup>
-
-<sup> Copyright © 2019 Apple Inc. All rights reserved. </sup>
-
-
-
-
+#
+<br>
+<br>
 <img src="https://github.com/AchimPieters/esp32-homekit-demo/blob/main/MIT-Software-license.png" width="300">
