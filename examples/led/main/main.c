@@ -162,8 +162,8 @@ homekit_accessory_t *accessories[] = {
 
 homekit_server_config_t config = {
         .accessories = accessories,
-        .password = "CONFIG_SETUP_CODE",
-        .setupId="CONFIG_SETUP_ID",
+        .password = CONFIG_HOMEKIT_DEVICE_SETUP_CODE,
+        .setupId = CONFIG_HOMEKIT_DEVICE_SETUP_ID,
 };
 
 void on_wifi_ready() {
