@@ -1,8 +1,65 @@
 menu "StudioPieters"
-    config LED_GPIO
-        int "Set the GPIO for the LED"
-        default 2
-        help
-            The GPIO number the LED is connected to.
+
+config WIFI_SSID
+  string "Your WIFI SSID"
+  default "WIFI SSID"
+  help
+  Enter your network name (SSID).
+
+config WIFI_PASSWORD
+  string "Your WIFI Password"
+  default "WIFI Password"
+  help
+  Enter your WIFI password.
+
+config LED_GPIO
+  int "Set the GPIO for the LED"
+  default 2
+  help
+  The GPIO number the LED is connected to.
+
+# Temperature Sensor setup options
+
+config SENSOR_GPIO
+  int "Set the GPIO for the Temperature Sensor"
+  default 4 if IDF_TARGET_ESP8266 || IDF_TARGET_ESP32C3
+  default 17 if IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+  help
+  The GPIO number the Temperature Sensor is connected to.
+
+choice EXAMPLE_CHIP_TYPE
+  prompt "Select chip type"
+  default EXAMPLE_TYPE_AM2301
+
+  config EXAMPLE_TYPE_DHT11
+  bool "DHT11"
+  config EXAMPLE_TYPE_AM2301
+  bool "DHT21/DHT22/AM2301/AM2302/AM2321"
+  config EXAMPLE_TYPE_SI7021
+  bool "Itead Si7021"
+endchoice
+
+config EXAMPLE_INTERNAL_PULLUP
+  bool "Enable internal pull-up resistor"
+  default 0
+  help
+  Check this option if you don't have external pull-up resistor on data GPIO.
+  DHT sensors that come mounted on a PCB generally have pull-up resistors on the data pin.
+  But for stable operation, it is recommended to provide an external pull-up resistor.
+
+
+# HomeKit setup options
+
+config HOMEKIT_DEVICE_SETUP_CODE
+  string "HomeKit Device Setup Code"
+  default "338-77-883"
+  help
+  HomeKit Setup code for the example to use.
+
+config HOMEKIT_DEVICE_SETUP_ID
+  string "HomeKit Device Setup ID"
+  default "1QJ8"
+  help
+  Setup ID code to be used for HomeKit pairing, if hard-coded setup code is enabled.
 
 endmenu
