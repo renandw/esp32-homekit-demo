@@ -28,6 +28,6 @@
 [submodule "components/esp-idf-lib"]
 	path = components/esp-idf-lib
 	url = https://github.com/AchimPieters/esp-idf-lib.git
-[submodule "components/common/esp32-wolfssl"]
+[submodule "components/common/wolfssl"]
 	path = components/common/wolfssl
-	url = https://github.com/AchimPieters/esp32-wolfssl.git
+	url = https://github.com/AchimPieters/esp32-wolfssl
