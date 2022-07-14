@@ -61,4 +61,4 @@ and then press enter, The result will be in a directory build and the process 
 #
 <br>
 <br>
-<img src="https://github.com/AchimPieters/esp32-homekit-demo/blob/main/MIT-Software-license.png" width="300">
+<img src="https://github.com/AchimPieters/esp32-homekit-demo/blob/main/MIT-Software-license_BW.png" width="300">
